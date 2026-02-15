@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: careplan_db
       POSTGRES_USER: careplan_user
       POSTGRES_PASSWORD: careplan_pass
+    ports:
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
