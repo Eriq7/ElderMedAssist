@@ -65,6 +65,29 @@
     .history-plan { margin-top: 10px; font-size: 14px; }
     .empty-msg { color: #aaa; }
 
+    /* ── Search ── */
+    .search-bar {
+      display: flex; gap: 10px; margin-bottom: 16px;
+    }
+    .search-bar input {
+      flex: 1; padding: 9px 12px; border: 1px solid #ddd;
+      border-radius: 6px; font-size: 14px;
+    }
+    .search-bar input:focus { outline: none; border-color: #c00; }
+    .search-bar button {
+      background: #c00; color: #fff; border: none; padding: 9px 20px;
+      border-radius: 6px; font-size: 14px; cursor: pointer;
+    }
+    .search-bar button:hover { background: #a00; }
+
+    /* ── Download button ── */
+    .btn-download {
+      display: inline-block; margin-top: 8px; padding: 5px 14px;
+      background: #0066cc; color: #fff; border: none; border-radius: 4px;
+      font-size: 12px; cursor: pointer; text-decoration: none;
+    }
+    .btn-download:hover { background: #004999; }
+
     /* ── Spinner ── */
     .spinner {
       display: inline-block; width: 18px; height: 18px;
@@ -109,6 +132,10 @@
   <!-- ── History ── -->
   <div class="card">
     <h2>Care Plan History</h2>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search by patient, medication, ICD-10, provider…">
+      <button onclick="loadHistory()">Search</button>
+    </div>
     <div id="history"><p class="empty-msg">Loading…</p></div>
   </div>
 
@@ -133,10 +160,12 @@
   /* ── Load history ── */
   async function loadHistory() {
     try {
-      const res  = await fetch('/api/careplans/');
+      const q = document.getElementById('search-input').value.trim();
+      const url = q ? `/api/careplans/?q=${encodeURIComponent(q)}` : '/api/careplans/';
+      const res  = await fetch(url);
       const plans = await res.json();
       const el = document.getElementById('history');
-      if (!plans.length) { el.innerHTML = '<p class="empty-msg">No care plans yet.</p>'; return; }
+      if (!plans.length) { el.innerHTML = '<p class="empty-msg">No care plans found.</p>'; return; }
       el.innerHTML = plans.map(p => `
         <div class="history-item">
           <div class="history-header">
@@ -144,10 +173,18 @@
             ${badgeHtml(p.status)}
           </div>
           <div class="history-meta">${p.medication} · ${new Date(p.created_at).toLocaleString()}</div>
-          ${p.status === 'completed' ? `<div class="history-plan">${mdToHtml(p.care_plan_text)}</div>` : ''}
+          ${p.status === 'completed' ? `
+            <div class="history-plan">${mdToHtml(p.care_plan_text)}</div>
+            <a class="btn-download" href="/api/careplans/${p.id}/download/">Download .txt</a>
+          ` : ''}
         </div>`).join('');
     } catch(e) { console.error(e); }
   }
+
+  /* ── Enter 键触发搜索 ── */
+  document.getElementById('search-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loadHistory();
+  });
 
   loadHistory();
 
@@ -185,7 +222,9 @@
       document.getElementById('result-status').textContent = data.status;
 
       if (data.status === 'completed') {
-        document.getElementById('result-content').innerHTML = mdToHtml(data.care_plan_text);
+        document.getElementById('result-content').innerHTML =
+          mdToHtml(data.care_plan_text) +
+          `<a class="btn-download" href="/api/careplans/${data.id}/download/">Download .txt</a>`;
       } else {
         document.getElementById('result-content').innerHTML =
           `<p style="color:#c00">Generation failed. ${data.care_plan_text}</p>`;

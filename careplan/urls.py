@@ -5,4 +5,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('api/generate/', views.generate_careplan, name='generate_careplan'),
     path('api/careplans/', views.list_careplans, name='list_careplans'),
+    path('api/careplans/<int:pk>/download/', views.download_careplan, name='download_careplan'),
 ]

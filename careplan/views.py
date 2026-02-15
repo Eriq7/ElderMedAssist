@@ -2,7 +2,7 @@ import json
 import os
 
 import openai
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -18,6 +18,8 @@ def index(request):
 @require_http_methods(["POST"])
 def generate_careplan(request):
     data = json.loads(request.body)
+    print(f"\n{'='*50}")
+    print(f"[DEBUG 1] 收到请求, data = {data}")
 
     # 1) 创建，状态 = pending
     care_plan = CarePlan.objects.create(
@@ -33,8 +35,10 @@ def generate_careplan(request):
     # 2) 改为 processing
     care_plan.status = 'processing'
     care_plan.save()
+    print(f"[DEBUG 2] CarePlan #{care_plan.id} 已创建, status={care_plan.status}")
 
     # 3) 同步调用 LLM
+    print(f"[DEBUG 3] 开始调用 LLM ...")
     try:
         result = call_llm(
             patient_name=care_plan.patient_name,
@@ -44,11 +48,15 @@ def generate_careplan(request):
         )
         care_plan.status = 'completed'
         care_plan.care_plan_text = result
+        print(f"[DEBUG 4] LLM 返回成功, 前100字: {result[:100]}...")
     except Exception as e:
         care_plan.status = 'failed'
         care_plan.care_plan_text = str(e)
+        print(f"[DEBUG 4] LLM 调用失败: {e}")
 
     care_plan.save()
+    print(f"[DEBUG 5] 最终 status={care_plan.status}, 返回 JSON")
+    print(f"{'='*50}\n")
 
     return JsonResponse(serialize_careplan(care_plan))
 
@@ -56,7 +64,37 @@ def generate_careplan(request):
 @require_http_methods(["GET"])
 def list_careplans(request):
     plans = CarePlan.objects.all().order_by('-created_at')
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        plans = plans.filter(patient_name__icontains=q) | \
+                plans.filter(medication__icontains=q) | \
+                plans.filter(icd10_code__icontains=q) | \
+                plans.filter(provider_name__icontains=q)
+
     return JsonResponse([serialize_careplan(p) for p in plans], safe=False)
+
+
+@require_http_methods(["GET"])
+def download_careplan(request, pk):
+    plan = CarePlan.objects.get(id=pk)
+
+    content = (
+        f"Care Plan #{plan.id}\n"
+        f"{'=' * 40}\n"
+        f"Patient: {plan.patient_name} (MRN: {plan.patient_mrn})\n"
+        f"Medication: {plan.medication}\n"
+        f"ICD-10: {plan.icd10_code}\n"
+        f"Provider: {plan.provider_name} (NPI: {plan.provider_npi})\n"
+        f"Status: {plan.status}\n"
+        f"Created: {plan.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+        f"{'=' * 40}\n\n"
+        f"{plan.care_plan_text}\n"
+    )
+
+    response = HttpResponse(content, content_type='text/plain')
+    response['Content-Disposition'] = f'attachment; filename="careplan_{plan.id}.txt"'
+    return response
 
 
 def serialize_careplan(p):
@@ -79,6 +117,7 @@ def serialize_careplan(p):
 
 def call_llm(patient_name, medication, icd10_code, provider_name):
     api_key = os.environ.get('OPENAI_API_KEY', '')
+    print(f"[DEBUG LLM] api_key 存在: {bool(api_key and api_key != 'your-api-key-here')}")
 
     if not api_key or api_key == 'your-api-key-here':
         # 没有 API key 时返回 mock 数据，方便你先跑通流程
