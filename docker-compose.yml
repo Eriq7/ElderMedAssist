@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: careplan_db
+      POSTGRES_USER: careplan_user
+      POSTGRES_PASSWORD: careplan_pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careplan_user -d careplan_db"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_NAME=careplan_db
+      - DATABASE_USER=careplan_user
+      - DATABASE_PASSWORD=careplan_pass
+
+volumes:
+  pgdata:
