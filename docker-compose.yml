@@ -46,5 +46,24 @@ services:
       - DATABASE_PASSWORD=careplan_pass
       - REDIS_HOST=redis
 
+  worker:
+    build: .
+    command: celery -A config worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_NAME=careplan_db
+      - DATABASE_USER=careplan_user
+      - DATABASE_PASSWORD=careplan_pass
+      - REDIS_HOST=redis
+
 volumes:
   pgdata:

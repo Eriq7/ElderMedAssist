@@ -2,21 +2,12 @@ import json
 import os
 
 import openai
-import redis
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import CarePlan
-
-# 连接 Redis
-redis_client = redis.Redis(
-    host=os.environ.get('REDIS_HOST', 'localhost'),
-    port=6379,
-    db=0,
-)
-QUEUE_NAME = 'careplan_queue'
 
 
 def index(request):
@@ -42,10 +33,10 @@ def generate_careplan(request):
     )
     print(f"[DEBUG 2] CarePlan #{care_plan.id} 已存入数据库, status=pending")
 
-    # 2) 把 careplan_id 放进 Redis 队列
-    redis_client.rpush(QUEUE_NAME, care_plan.id)
-    queue_length = redis_client.llen(QUEUE_NAME)
-    print(f"[DEBUG 3] careplan_id={care_plan.id} 已放入 Redis 队列, 当前队列长度={queue_length}")
+    # 2) 发送 Celery 异步任务
+    from .tasks import generate_careplan_task
+    generate_careplan_task.delay(care_plan.id)
+    print(f"[DEBUG 3] careplan_id={care_plan.id} Celery task dispatched")
 
     # 3) 立刻返回给用户
     print(f"[DEBUG 4] 立刻返回 202 Accepted")
