@@ -15,6 +15,16 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
   web:
     build: .
     command: bash -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
@@ -25,6 +35,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -32,6 +44,7 @@ services:
       - DATABASE_NAME=careplan_db
       - DATABASE_USER=careplan_user
       - DATABASE_PASSWORD=careplan_pass
+      - REDIS_HOST=redis
 
 volumes:
   pgdata:

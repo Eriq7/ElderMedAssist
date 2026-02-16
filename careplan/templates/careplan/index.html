@@ -197,9 +197,6 @@
 
     const resultDiv = document.getElementById('result');
     resultDiv.style.display = 'block';
-    document.getElementById('result-status').className = 'badge badge-processing';
-    document.getElementById('result-status').textContent = 'processing';
-    document.getElementById('result-content').innerHTML = 'Calling LLM, please wait…';
 
     const body = {
       patient_name:  document.getElementById('patient_name').value,
@@ -221,13 +218,16 @@
       document.getElementById('result-status').className = `badge badge-${data.status}`;
       document.getElementById('result-status').textContent = data.status;
 
-      if (data.status === 'completed') {
+      if (data.status === 'pending') {
+        document.getElementById('result-content').innerHTML =
+          `<p>Care Plan #${data.id} received, queued for processing.</p>`;
+      } else if (data.status === 'completed') {
         document.getElementById('result-content').innerHTML =
           mdToHtml(data.care_plan_text) +
           `<a class="btn-download" href="/api/careplans/${data.id}/download/">Download .txt</a>`;
       } else {
         document.getElementById('result-content').innerHTML =
-          `<p style="color:#c00">Generation failed. ${data.care_plan_text}</p>`;
+          `<p style="color:#c00">Generation failed. ${data.care_plan_text || ''}</p>`;
       }
       loadHistory();
     } catch (err) {

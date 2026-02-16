@@ -2,12 +2,21 @@ import json
 import os
 
 import openai
+import redis
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .models import CarePlan
+
+# 连接 Redis
+redis_client = redis.Redis(
+    host=os.environ.get('REDIS_HOST', 'localhost'),
+    port=6379,
+    db=0,
+)
+QUEUE_NAME = 'careplan_queue'
 
 
 def index(request):
@@ -21,7 +30,7 @@ def generate_careplan(request):
     print(f"\n{'='*50}")
     print(f"[DEBUG 1] 收到请求, data = {data}")
 
-    # 1) 创建，状态 = pending
+    # 1) 存数据库，status = pending
     care_plan = CarePlan.objects.create(
         patient_name=data['patient_name'],
         patient_mrn=data['patient_mrn'],
@@ -31,34 +40,22 @@ def generate_careplan(request):
         provider_npi=data['provider_npi'],
         status='pending',
     )
+    print(f"[DEBUG 2] CarePlan #{care_plan.id} 已存入数据库, status=pending")
 
-    # 2) 改为 processing
-    care_plan.status = 'processing'
-    care_plan.save()
-    print(f"[DEBUG 2] CarePlan #{care_plan.id} 已创建, status={care_plan.status}")
+    # 2) 把 careplan_id 放进 Redis 队列
+    redis_client.rpush(QUEUE_NAME, care_plan.id)
+    queue_length = redis_client.llen(QUEUE_NAME)
+    print(f"[DEBUG 3] careplan_id={care_plan.id} 已放入 Redis 队列, 当前队列长度={queue_length}")
 
-    # 3) 同步调用 LLM
-    print(f"[DEBUG 3] 开始调用 LLM ...")
-    try:
-        result = call_llm(
-            patient_name=care_plan.patient_name,
-            medication=care_plan.medication,
-            icd10_code=care_plan.icd10_code,
-            provider_name=care_plan.provider_name,
-        )
-        care_plan.status = 'completed'
-        care_plan.care_plan_text = result
-        print(f"[DEBUG 4] LLM 返回成功, 前100字: {result[:100]}...")
-    except Exception as e:
-        care_plan.status = 'failed'
-        care_plan.care_plan_text = str(e)
-        print(f"[DEBUG 4] LLM 调用失败: {e}")
-
-    care_plan.save()
-    print(f"[DEBUG 5] 最终 status={care_plan.status}, 返回 JSON")
+    # 3) 立刻返回给用户
+    print(f"[DEBUG 4] 立刻返回 202 Accepted")
     print(f"{'='*50}\n")
 
-    return JsonResponse(serialize_careplan(care_plan))
+    return JsonResponse({
+        'id': care_plan.id,
+        'status': 'pending',
+        'message': 'Received, queued for processing',
+    }, status=202)
 
 
 @require_http_methods(["GET"])
