@@ -17,13 +17,8 @@ def index(request):
 @require_http_methods(["POST"])
 def generate_careplan(request):
     data = json.loads(request.body)
-    care_plan = services.create_careplan(data)
-
-    return JsonResponse({
-        'id': care_plan.id,
-        'status': 'pending',
-        'message': 'Received, queued for processing',
-    }, status=202)
+    result = services.create_careplan(data)
+    return JsonResponse(result, status=202)
 
 
 @require_http_methods(["GET"])

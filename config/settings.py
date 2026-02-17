@@ -15,6 +15,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
+    'careplan.middleware.ExceptionHandlerMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
