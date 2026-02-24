@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Care Plan Generator</title>
+  <title>ElderMedAssist</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -12,7 +12,7 @@
     }
     .container { max-width: 860px; margin: 0 auto; padding: 24px 16px; }
 
-    h1 { color: #c00; margin-bottom: 4px; }
+    h1 { color: #2563eb; margin-bottom: 4px; }
     .subtitle { color: #888; margin-bottom: 28px; font-size: 14px; }
 
     .card {
@@ -23,19 +23,21 @@
 
     /* ── Form ── */
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-full { grid-column: 1 / -1; }
     label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
-    input {
+    input, textarea {
       width: 100%; padding: 9px 12px; border: 1px solid #ddd;
-      border-radius: 6px; font-size: 14px;
+      border-radius: 6px; font-size: 14px; font-family: inherit;
     }
-    input:focus { outline: none; border-color: #c00; }
+    textarea { resize: vertical; min-height: 60px; }
+    input:focus, textarea:focus { outline: none; border-color: #2563eb; }
 
     button#submit-btn {
-      margin-top: 18px; background: #c00; color: #fff; border: none;
+      margin-top: 18px; background: #2563eb; color: #fff; border: none;
       padding: 11px 36px; border-radius: 6px; font-size: 15px;
       cursor: pointer; transition: background .2s;
     }
-    button#submit-btn:hover { background: #a00; }
+    button#submit-btn:hover { background: #1d4ed8; }
     button#submit-btn:disabled { background: #bbb; cursor: not-allowed; }
 
     /* ── Status badges ── */
@@ -73,12 +75,12 @@
       flex: 1; padding: 9px 12px; border: 1px solid #ddd;
       border-radius: 6px; font-size: 14px;
     }
-    .search-bar input:focus { outline: none; border-color: #c00; }
+    .search-bar input:focus { outline: none; border-color: #2563eb; }
     .search-bar button {
-      background: #c00; color: #fff; border: none; padding: 9px 20px;
+      background: #2563eb; color: #fff; border: none; padding: 9px 20px;
       border-radius: 6px; font-size: 14px; cursor: pointer;
     }
-    .search-bar button:hover { background: #a00; }
+    .search-bar button:hover { background: #1d4ed8; }
 
     /* ── Download button ── */
     .btn-download {
@@ -91,7 +93,7 @@
     /* ── Spinner ── */
     .spinner {
       display: inline-block; width: 18px; height: 18px;
-      border: 3px solid #ddd; border-top-color: #c00;
+      border: 3px solid #ddd; border-top-color: #2563eb;
       border-radius: 50%; animation: spin .8s linear infinite;
       vertical-align: middle; margin-right: 8px;
     }
@@ -101,31 +103,39 @@
 <body>
 <div class="container">
 
-  <h1>AI Care Plan Generator</h1>
-  <p class="subtitle">Generate clinical pharmacy care plans powered by AI</p>
+  <h1>ElderMedAssist</h1>
+  <p class="subtitle">Your AI-powered daily medication guide for safer, simpler care</p>
 
   <!-- ── Form ── -->
   <div class="card">
-    <h2>New Care Plan Request</h2>
+    <h2>Your Information</h2>
     <form id="careplan-form">
       <div class="form-grid">
         <div><label>First Name</label><input id="patient_first_name" placeholder="Jane" required></div>
         <div><label>Last Name</label><input id="patient_last_name" placeholder="Doe" required></div>
-        <div><label>MRN</label><input id="patient_mrn" placeholder="123456" required></div>
         <div><label>Date of Birth</label><input id="date_of_birth" type="date" required></div>
-        <div><label>Medication</label><input id="medication_name" placeholder="Metformin 500mg" required></div>
-        <div><label>ICD-10 Code</label><input id="icd10_code" placeholder="E11.9" required></div>
-        <div><label>Provider Name</label><input id="provider_name" placeholder="Smith" required></div>
-        <div><label>Provider NPI</label><input id="provider_npi" placeholder="1234567890" required></div>
+        <div></div>
+        <div class="form-full">
+          <label>Medications</label>
+          <textarea id="medications" placeholder="e.g. Metformin 500mg, Lisinopril 10mg, Aspirin 81mg" required></textarea>
+        </div>
+        <div class="form-full">
+          <label>Allergies (optional)</label>
+          <textarea id="allergies" placeholder="e.g. Penicillin, Sulfa drugs"></textarea>
+        </div>
+        <div class="form-full">
+          <label>Health Conditions (optional)</label>
+          <textarea id="health_conditions" placeholder="e.g. Type 2 Diabetes, High Blood Pressure"></textarea>
+        </div>
       </div>
-      <button type="submit" id="submit-btn">Generate Care Plan</button>
+      <button type="submit" id="submit-btn">Generate My Medication Guide</button>
     </form>
   </div>
 
   <!-- ── Result ── -->
   <div class="card" id="result">
     <div class="history-header">
-      <h2>Generated Care Plan</h2>
+      <h2>Your Medication Guide</h2>
       <span class="badge" id="result-status"></span>
     </div>
     <div class="plan-text" id="result-content"></div>
@@ -133,12 +143,12 @@
 
   <!-- ── History ── -->
   <div class="card">
-    <h2>Care Plan History</h2>
+    <h2>Previous Guides</h2>
     <div class="search-bar">
-      <input type="text" id="search-input" placeholder="Search by patient, medication, ICD-10, provider…">
+      <input type="text" id="search-input" placeholder="Search by name or medication...">
       <button onclick="loadHistory()">Search</button>
     </div>
-    <div id="history"><p class="empty-msg">Loading…</p></div>
+    <div id="history"><p class="empty-msg">Loading...</p></div>
   </div>
 
 </div>
@@ -147,11 +157,11 @@
   /* ── helpers ── */
   function mdToHtml(text) {
     let html = text
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')          // escape
-      .replace(/^## (.+)$/gm,   '<h3>$1</h3>')               // ## → h3
-      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')            // 1. → li
-      .replace(/^- (.+)$/gm,       '<li>$1</li>')             // -  → li
-      .replace(/\n{2,}/g, '<br>');                             // blank lines
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/^## (.+)$/gm,   '<h3>$1</h3>')
+      .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+      .replace(/^- (.+)$/gm,       '<li>$1</li>')
+      .replace(/\n{2,}/g, '<br>');
     return html;
   }
 
@@ -167,14 +177,14 @@
       const res  = await fetch(url);
       const plans = await res.json();
       const el = document.getElementById('history');
-      if (!plans.length) { el.innerHTML = '<p class="empty-msg">No care plans found.</p>'; return; }
+      if (!plans.length) { el.innerHTML = '<p class="empty-msg">No guides found.</p>'; return; }
       el.innerHTML = plans.map(p => `
         <div class="history-item">
           <div class="history-header">
             <strong>${p.patient_name}</strong>
             ${badgeHtml(p.status)}
           </div>
-          <div class="history-meta">${p.medication} · ${new Date(p.created_at).toLocaleString()}</div>
+          <div class="history-meta">${p.medications} · ${new Date(p.created_at).toLocaleString()}</div>
           ${p.status === 'completed' ? `
             <div class="history-plan">${mdToHtml(p.care_plan_text)}</div>
             <a class="btn-download" href="/api/careplans/${p.id}/download/">Download .txt</a>
@@ -183,7 +193,6 @@
     } catch(e) { console.error(e); }
   }
 
-  /* ── Enter 键触发搜索 ── */
   document.getElementById('search-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') loadHistory();
   });
@@ -192,14 +201,13 @@
 
   /* ── Polling ── */
   function pollStatus(carePlanId) {
-    const INTERVAL = 3000;  // every 3 seconds
+    const INTERVAL = 3000;
 
     const timer = setInterval(async () => {
       try {
         const res = await fetch(`/api/careplans/${carePlanId}/status/`);
         const data = await res.json();
 
-        // Update badge
         document.getElementById('result-status').className = `badge badge-${data.status}`;
         document.getElementById('result-status').textContent = data.status;
 
@@ -215,7 +223,6 @@
             `<p style="color:#c00">Generation failed. ${data.care_plan_text || ''}</p>`;
           loadHistory();
         }
-        // pending or processing → keep polling
       } catch (err) {
         console.error('Polling error:', err);
       }
@@ -227,23 +234,21 @@
     e.preventDefault();
     const btn = document.getElementById('submit-btn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Generating…';
+    btn.innerHTML = '<span class="spinner"></span>Generating...';
 
     const resultDiv = document.getElementById('result');
     resultDiv.style.display = 'block';
     document.getElementById('result-status').className = 'badge badge-pending';
     document.getElementById('result-status').textContent = 'pending';
-    document.getElementById('result-content').innerHTML = '<p><span class="spinner"></span>Processing, please wait...</p>';
+    document.getElementById('result-content').innerHTML = '<p><span class="spinner"></span>Generating your medication guide, please wait...</p>';
 
     const body = {
       patient_first_name: document.getElementById('patient_first_name').value,
       patient_last_name:  document.getElementById('patient_last_name').value,
-      patient_mrn:        document.getElementById('patient_mrn').value,
       date_of_birth:      document.getElementById('date_of_birth').value,
-      medication_name:    document.getElementById('medication_name').value,
-      icd10_code:         document.getElementById('icd10_code').value,
-      provider_name:      document.getElementById('provider_name').value,
-      provider_npi:       document.getElementById('provider_npi').value,
+      medications:        document.getElementById('medications').value,
+      allergies:          document.getElementById('allergies').value,
+      health_conditions:  document.getElementById('health_conditions').value,
     };
 
     try {
@@ -254,8 +259,14 @@
       });
       const data = await res.json();
 
-      // Start polling for this care plan
-      pollStatus(data.id);
+      if (data.id) {
+        pollStatus(data.id);
+      } else {
+        document.getElementById('result-status').className = 'badge badge-failed';
+        document.getElementById('result-status').textContent = 'error';
+        document.getElementById('result-content').innerHTML =
+          `<p style="color:#c00">${data.message || 'Something went wrong.'}</p>`;
+      }
 
     } catch (err) {
       document.getElementById('result-status').className = 'badge badge-failed';
@@ -265,7 +276,7 @@
     }
 
     btn.disabled = false;
-    btn.textContent = 'Generate Care Plan';
+    btn.textContent = 'Generate My Medication Guide';
   });
 </script>
 </body>

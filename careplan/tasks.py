@@ -16,10 +16,8 @@ from .metrics import (
 
 @shared_task(bind=True, max_retries=3)
 def generate_careplan_task(self, careplan_id):
-    plan = CarePlan.objects.select_related('order__patient', 'order__provider').get(id=careplan_id)
-    patient = plan.order.patient
-    order = plan.order
-    provider = plan.order.provider
+    plan = CarePlan.objects.select_related('patient').get(id=careplan_id)
+    patient = plan.patient
 
     print(f"[Celery] Processing CarePlan #{plan.id} - {patient.first_name} {patient.last_name}")
 
@@ -30,9 +28,9 @@ def generate_careplan_task(self, careplan_id):
     try:
         result = call_llm(
             patient_name=f"{patient.first_name} {patient.last_name}",
-            medication=order.medication_name,
-            icd10_code=order.icd10_code,
-            provider_name=provider.name,
+            medications=patient.medications,
+            allergies=patient.allergies,
+            health_conditions=patient.health_conditions,
         )
         duration = time.monotonic() - start
 
