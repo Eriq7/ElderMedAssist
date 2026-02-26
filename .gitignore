@@ -10,3 +10,6 @@ celerybeat-schedule
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
+
+# Lambda zips
+lambdas/zips/
