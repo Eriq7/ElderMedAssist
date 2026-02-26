@@ -5,3 +5,8 @@ db.sqlite3
 *.egg-info/
 venv/
 celerybeat-schedule
+
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
