@@ -185,3 +185,64 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   function_name    = aws_lambda_function.generate_careplan.arn
   batch_size       = 1
 }
+
+# ── API Gateway (HTTP API) ────────────────────────────────
+
+resource "aws_apigatewayv2_api" "careplan_api" {
+  name          = "eldermed-careplan-api"
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.careplan_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+output "api_url" {
+  value = aws_apigatewayv2_stage.default.invoke_url
+}
+
+# ── API Gateway → Lambda 连接 ─────────────────────────────
+
+# Lambda 1: POST /orders → create_order
+resource "aws_apigatewayv2_integration" "create_order" {
+  api_id                 = aws_apigatewayv2_api.careplan_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.create_order.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "post_orders" {
+  api_id    = aws_apigatewayv2_api.careplan_api.id
+  route_key = "POST /orders"
+  target    = "integrations/${aws_apigatewayv2_integration.create_order.id}"
+}
+
+resource "aws_lambda_permission" "apigw_create_order" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.create_order.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.careplan_api.execution_arn}/*/*"
+}
+
+# Lambda 3: GET /orders/{id} → get_order
+resource "aws_apigatewayv2_integration" "get_order" {
+  api_id                 = aws_apigatewayv2_api.careplan_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_order.invoke_arn
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "get_orders" {
+  api_id    = aws_apigatewayv2_api.careplan_api.id
+  route_key = "GET /orders/{id}"
+  target    = "integrations/${aws_apigatewayv2_integration.get_order.id}"
+}
+
+resource "aws_lambda_permission" "apigw_get_order" {
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_order.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.careplan_api.execution_arn}/*/*"
+}
