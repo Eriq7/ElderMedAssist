@@ -10,6 +10,12 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "openai_api_key" {
+  description = "OpenAI API key for LLM calls"
+  type        = string
+  sensitive   = true
+}
+
 # Dead Letter Queue — 失败 3 次的消息会被移到这里
 resource "aws_sqs_queue" "careplan_dlq" {
   name = "eldermed-careplan-dlq"
@@ -157,7 +163,7 @@ resource "aws_lambda_function" "generate_careplan" {
 
   environment {
     variables = merge(local.db_env, {
-      OPENAI_API_KEY = "placeholder"
+      OPENAI_API_KEY = var.openai_api_key
     })
   }
 }
