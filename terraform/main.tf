@@ -203,6 +203,10 @@ output "api_url" {
   value = aws_apigatewayv2_stage.default.invoke_url
 }
 
+output "rds_address" {
+  value = aws_db_instance.careplan_db.address
+}
+
 # ── API Gateway → Lambda 连接 ─────────────────────────────
 
 # Lambda 1: POST /orders → create_order
